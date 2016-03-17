@@ -8,17 +8,27 @@ var path = require("path");
 app.use(express.static(__dirname + "./static"));
 app.set('views', path.join(__dirname, './views'));
 app.set('view engine', 'ejs');
+var validate = require('mongoose-validator');
+
+var nameValidator = [
+  validate({
+    validator: 'isLength',
+    arguments: 4,
+    message: 'Name should be at least 4 characters'
+  })
+]
+
 
 var Schema = mongoose.Schema
 
 var PostSchema = new mongoose.Schema({
- name: String,
+ name: {type: String ,validate: nameValidator},
  post: String,
  comments: [{type: Schema.Types.ObjectId, ref: 'Comment'}]
 });
 
 var CommentSchema = new mongoose.Schema({
-  name: String,
+  name: {type: String, validate: nameValidator},
   comment: String,
  _post: {type: Schema.Types.ObjectId, ref: 'Post'},
  created_at: {type: Date, default: new Date}
@@ -26,6 +36,11 @@ var CommentSchema = new mongoose.Schema({
 
 PostSchema.path('name').required(true, 'Name cannot be blank');
 PostSchema.path('post').required(true, 'Post cannot be blank');
+
+
+CommentSchema.path('comment').required(true, 'Comment cannot be blank');
+CommentSchema.path('name').required(true, 'Name cannot be blank');
+
 
 mongoose.model('Post', PostSchema);
 mongoose.model('Comment', CommentSchema);
@@ -67,11 +82,13 @@ app.post('/comment/:id', function(req,res){
          post.comments.push(new_comment);
          console.log("above save" + new_comment)
          new_comment.save(function(err){
-            post.save(function(err){
+            post.save(function(err2){
     if(err) { 
-      console.log('Error'); 
-    } 
-    else { 
+      // var errors = new_comment.errors
+       Post.find({}).populate('comments').exec(function(err3, posts){
+          res.render('index', {title: 'you have errors!', errors: new_comment.errors, posts: posts})
+        })
+    } else { 
       // console.log(post)
       res.redirect('/'); 
     }
